@@ -127,11 +127,13 @@ class Math
         $userWeekWithdrawCount = [];
         $userWeekWithdrawAmount = [];
         foreach($this->transactionRecords as $trans) {
+            // deposits have fixed rate
             if ($trans->transType == 'deposit') {
                 $rate = $this->config['rates']['deposit'];
                 $trans->fee = ($trans->amount/100)*$rate;
             }
             else if ($trans->transType == 'withdraw') {
+                // business clients have fixed rate
                 if ($trans->userType == 'business') {
                     $rate = $this->config['rates']['business_withdraw'];
                     $trans->fee = ($trans->amount/100)*$rate;
@@ -139,7 +141,9 @@ class Math
                 else if ($trans->userType == 'private') {
                     $rate = $this->config['rates']['private_withdraw'];
                     $amountInEuros = $this->amountInEuros($trans);
+                    // current withdraw transaction
                     $currTrans = $trans;
+                    // if for current user this is first withdraw transaction
                     if ($prevTrans == NULL) {
                         $userWeekWithdrawCount[$trans->userId] = 1;
                         $userWeekWithdrawAmount[$trans->userId] = $amountInEuros;
@@ -148,11 +152,14 @@ class Math
                             $trans->fee = ($this->amountInOrigCurrency($charged,$currTrans->currency) / 100) * $rate;
                             //next withdraw charged at regular rate
                             $userWeekWithdrawCount[$trans->userId] = 4;
-                        } else {
+                        }
+                        else {
                             $trans->fee = 0;
                         }
+                        //previous withdraw transaction
                         $prevTrans = $trans;
                     }
+                    // user prevoiusly had withdraw transaction
                     else if ($prevTrans->userId == $currTrans->userId) {
                         $currTransDayOfWeek = $this->dayOfWeek($currTrans->date);
                         $prevtransDayofWeek = $this->dayOfWeek($prevTrans->date);
@@ -194,6 +201,7 @@ class Math
                         }
                         $prevTrans = $trans;;
                     }
+                    // prevoius withdraw transaction was for other user
                     else {
                         $prevTrans = NULL;
                         $userWeekWithdrawCount[$trans->userId] = 1;
